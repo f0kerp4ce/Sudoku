@@ -1,6 +1,5 @@
 import numpy as np
 import time
-from functools import lru_cache
 
 class Sudoku:
     def __init__(self):
@@ -59,8 +58,9 @@ class Sudoku:
 
     @staticmethod
     def testAllSolvers():
-        Sudoku.testSolver(Sudoku._solve_bruteforce, n = 20)
-        Sudoku.testSolver(Sudoku._solve_bruteforce_v2, n = 20)
+        n = 5
+        Sudoku.testSolver(Sudoku._solve_bruteforce, n)
+        Sudoku.testSolver(Sudoku._solve_bruteforce_v2, n)
 
     def _get_row(self, i):
         return self.sudoku[(i*9):(i*9 + 9)]
@@ -74,13 +74,13 @@ class Sudoku:
         return [self.sudoku[(ri + ci)*9 + (rj + cj)] for ci in range(3) for cj in range(3)]
 
     def _specific_is_possible(self, x):
-        # first check in the row
         i, j = self._considering
+        # check in the row
         if not all([x != c for c in self._get_row(i)]): return False
         # check same column
-        if not all([x != c for c in self._get_column(j)]): return False
-        # check same block
         if not all([x != c for c in self._get_block(i, j)]): return False
+        # check same block
+        if not all([x != c for c in self._get_column(j)]): return False
         return True
 
     def _get_possible_for(self, i, j):
@@ -107,28 +107,43 @@ class Sudoku:
     @staticmethod 
     def _solve_bruteforce_v2(grid):
         s = Sudoku.fromArray(grid)
+        s._solve_bruteforce_v2.is_correct = False
         possible_positions = []
-        
+
+
         for i in range(81):
             if grid[i] == 0:
                 ri, rj = i//9, i%9
-                possible_positions.append((ri, rj, s._get_possible_for(ri, rj)))
+                possible = s._get_possible_for(ri, rj)
+                tup = (ri, rj, possible, len(possible))
+
+                # quick cut off
+                if len(tup) == 0: return None
+                if len(possible) == 1:
+                    i = 9*ri + rj
+                    grid[i] = possible[0]
+                    return s._solve_bruteforce_v2(grid)
+
+                possible_positions.append(tup)
         
+
         lp = len(possible_positions)
         ri, rj, currlen, p = 0, 0, 1000, None
         for i in range(lp):
             ppi = possible_positions[i]
-            if len(ppi[2]) < currlen:
-                ri, rj, p = ppi
-                currlen = len(p)
-        if currlen == 0 or p is None: return None
+            if ppi[3] < currlen:
+                ri, rj, p, currlen = ppi
 
+        if currlen == 0 or p is None: return None
+        
         i = 9*ri + rj
         for x in p:
             grid[i] = x
             sol = Sudoku._solve_bruteforce_v2(grid.copy())
-            if Sudoku._check(sol): return sol
-
+            if s._solve_bruteforce_v2.is_correct or Sudoku._check(sol):
+                s._solve_bruteforce_v2.is_correct = True # use this in the future to skip checking at every level
+                return sol
+        
         return grid
         
     @staticmethod
@@ -138,13 +153,15 @@ class Sudoku:
         s = Sudoku.fromArray(grid)
         correct = True
         def _is_complete(l):
-            return len(set(l)) == 9 and 0 not in l
+            return all(map(lambda x: x in l, range(1,10))) and 0 not in l
         # check all rows
         for i in range(9):
             correct &= _is_complete(s._get_row(i))
+        if not correct: return False
         # check all columns
         for i in range(9):
             correct &= _is_complete(s._get_column(i))
+        if not correct: return False
         # check all blocks
         for i in range(3):
             for j in range(3):
