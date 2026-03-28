@@ -1,0 +1,16 @@
+solvers:
+  - name: "PYTHON-Sudoku._solve_bruteforce"
+    command: "python solvers/sudokusolver.py"
+
+  - name: "PYTHON-Sudoku._solve_bruteforce_v2"
+    command: "python solvers/sudokusolver.py"
+  
+  - name: "C-Optimized"
+    build: "gcc -O3 solvers/csolver.c -o solvers/csolver"
+    command: "./solvers/csolver"
+
+sudokus:
+  - easy: "data/sudoku0.txt"
+  - easy: "data/sudoku1.txt"
+  - medium: "data/sudoku2.txt"
+  - medium: "data/sudoku3.txt"

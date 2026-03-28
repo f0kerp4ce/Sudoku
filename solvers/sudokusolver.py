@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import sys
 
 class Sudoku:
     def __init__(self):
@@ -37,7 +38,7 @@ class Sudoku:
     @staticmethod
     def testSolver(solve, n = 20):
         t = Timer()
-        sudokus = ["sudoku0.txt", "sudoku1.txt", "sudoku2.txt", "sudoku3.txt"]
+        sudokus = ["data/sudoku0.txt", "data/sudoku1.txt", "data/sudoku2.txt", "data/sudoku3.txt"]
         solved = 0
         total_time = 0.0
         for s in sudokus:
@@ -124,11 +125,11 @@ class Sudoku:
                 possible_positions.append(tup)
         
 
-        lp = len(possible_positions)
-        if lp == 0: return grid
+        if not possible_positions: 
+            return grid
         
         tup = min(possible_positions, key=lambda x: x[3])
-        ri, rj, p, currlen = tup
+        ri, rj, p, _ = tup
 
         
         
@@ -136,7 +137,7 @@ class Sudoku:
         for x in p:
             grid[i] = x
             sol = Sudoku._solve_bruteforce_v2(grid.copy())
-            if Sudoku._check(sol):
+            if sol is not None:
                 return sol
         
         return None
@@ -171,7 +172,6 @@ class Sudoku:
 
 
 class Timer:
-    
     def start(self):
         self.start_time = time.perf_counter()
 
@@ -182,6 +182,53 @@ class Timer:
         print(msgbefore, (self.stop_time - self.start_time), "seconds", msgafter)
         return (self.stop_time - self.start_time)
 
+class BetterTimer:
+    def start(self):
+        self.start_time = time.perf_counter_ns()
 
-if __name__ == "__main__":
+    def stop(self):
+        self.stop_time = time.perf_counter_ns()
+
+    def get_time(self):
+        return self.stop_time - self.start_time
+
+
+def main():
     Sudoku.testAllSolvers()
+
+
+if __name__ == "__main__" and len(sys.argv) == 1:
+    main()
+elif len(sys.argv) != 1:
+    path = sys.argv[1]
+    n = int(sys.argv[2])
+    index = int(sys.argv[3])
+
+    solvers = [Sudoku._solve_bruteforce, Sudoku._solve_bruteforce_v2]
+    if index > len(solvers) or index < 0:
+        print("ERROR:solver does not exist")
+    solver = solvers[index]
+
+    print(f"Loading: {path}")
+    print(f"Running {solver.__name__} {n} times...")
+    grid = Sudoku.readSudoku(path)
+    
+    result = grid
+    times = []
+    bt = BetterTimer()
+    for i in range(n):
+        grid_copy = grid.copy()
+        bt.start()
+        result = Sudoku._solve_bruteforce_v2(grid_copy)
+        bt.stop()
+        times.append(bt.get_time())
+
+    total_time = sum(times)
+    times.sort()
+    mean_time = times[n//2]
+
+    print("LANGUAGE:PYTHON")
+    print("SOLUTION:" + "".join(list(map(str, list(result)))))
+    print("MEAN_TIME_NS:" + str(mean_time))
+    print("AVG_TIME_NS:" + str(total_time//n))
+    print("TOTAL_TIME_NS:" + str(total_time))
