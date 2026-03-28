@@ -37,8 +37,7 @@ class Sudoku:
     @staticmethod
     def testSolver(solve, n = 20):
         t = Timer()
-        sudokus = ["sudoku0.txt",
-                "sudoku1.txt"]
+        sudokus = ["sudoku0.txt", "sudoku1.txt", "sudoku2.txt", "sudoku3.txt"]
         solved = 0
         total_time = 0.0
         for s in sudokus:
@@ -51,14 +50,15 @@ class Sudoku:
             t.stop()
             succmsg = "Solved " + s + " successfully " + str(n) + " times in"
             othermsg = "Failed to solve " + s + " " + str(n) + " times in"
-            total_time += t.print(succmsg, ".")
+            msg = succmsg if succ else othermsg
+            total_time += t.print(msg, ".")
         avg = total_time / n / len(sudokus)
         print(f"The solver '{solve.name}' got {float(solved)/len(sudokus)*100}% correct with an average time of {avg} seconds.")
 
 
     @staticmethod
     def testAllSolvers():
-        n = 5
+        n = 1
         Sudoku.testSolver(Sudoku._solve_bruteforce, n)
         Sudoku.testSolver(Sudoku._solve_bruteforce_v2, n)
 
@@ -73,8 +73,7 @@ class Sudoku:
         rj = (j//3) *3
         return [self.sudoku[(ri + ci)*9 + (rj + cj)] for ci in range(3) for cj in range(3)]
 
-    def _specific_is_possible(self, x):
-        i, j = self._considering
+    def _specific_is_possible(self, x, i, j):
         # check in the row
         if not all([x != c for c in self._get_row(i)]): return False
         # check same column
@@ -84,8 +83,7 @@ class Sudoku:
         return True
 
     def _get_possible_for(self, i, j):
-        self._considering = (i, j)
-        return list(filter(self._specific_is_possible, range(1, 10)))
+        return list(filter(lambda x: self._specific_is_possible(x, i, j), range(1, 10)))
 
     
     @staticmethod 
@@ -107,7 +105,6 @@ class Sudoku:
     @staticmethod 
     def _solve_bruteforce_v2(grid):
         s = Sudoku.fromArray(grid)
-        s._solve_bruteforce_v2.is_correct = False
         possible_positions = []
 
 
@@ -118,33 +115,31 @@ class Sudoku:
                 tup = (ri, rj, possible, len(possible))
 
                 # quick cut off
-                if len(tup) == 0: return None
+                if len(possible) == 0: return None
                 if len(possible) == 1:
-                    i = 9*ri + rj
-                    grid[i] = possible[0]
-                    return s._solve_bruteforce_v2(grid)
+                    index = 9*ri + rj
+                    grid[index] = possible[0]
+                    return Sudoku._solve_bruteforce_v2(grid)
 
                 possible_positions.append(tup)
         
 
         lp = len(possible_positions)
-        ri, rj, currlen, p = 0, 0, 1000, None
-        for i in range(lp):
-            ppi = possible_positions[i]
-            if ppi[3] < currlen:
-                ri, rj, p, currlen = ppi
+        if lp == 0: return grid
+        
+        tup = min(possible_positions, key=lambda x: x[3])
+        ri, rj, p, currlen = tup
 
-        if currlen == 0 or p is None: return None
+        
         
         i = 9*ri + rj
         for x in p:
             grid[i] = x
             sol = Sudoku._solve_bruteforce_v2(grid.copy())
-            if s._solve_bruteforce_v2.is_correct or Sudoku._check(sol):
-                s._solve_bruteforce_v2.is_correct = True # use this in the future to skip checking at every level
+            if Sudoku._check(sol):
                 return sol
         
-        return grid
+        return None
         
     @staticmethod
     def _check(grid):
@@ -154,6 +149,7 @@ class Sudoku:
         correct = True
         def _is_complete(l):
             return all(map(lambda x: x in l, range(1,10))) and 0 not in l
+        
         # check all rows
         for i in range(9):
             correct &= _is_complete(s._get_row(i))
@@ -187,5 +183,5 @@ class Timer:
         return (self.stop_time - self.start_time)
 
 
-
-Sudoku.testAllSolvers()
+if __name__ == "__main__":
+    Sudoku.testAllSolvers()
