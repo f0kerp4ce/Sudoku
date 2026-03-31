@@ -5,9 +5,9 @@ solvers:
   - name: "PYTHON-Sudoku._solve_bruteforce_v2"
     command: "python solvers/sudokusolver.py"
   
-  - name: "C-Optimized"
-    build: "gcc -O3 solvers/csolver.c -o solvers/csolver"
-    command: "./solvers/csolver"
+  - name: "C-bruteforcer.c"
+    build: "gcc -O3 solvers/bruteforcer.c -o solvers/bruteforcer"
+    command: "./solvers/bruteforcer"
 
 sudokus:
   - easy: "data/sudoku0.txt"
