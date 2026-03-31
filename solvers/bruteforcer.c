@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int *read_sudoku(const char *path) {
-    int *board = (int *)malloc(81 * sizeof(int));
+int* read_sudoku(const char* path) {
+    int* board = (int *)malloc(81 * sizeof(int));
     if (!board) {
         fprintf(stderr, "Memory allocation failed\n");
         return NULL;
     }
 
-    FILE *file = fopen(path, "r");
+    FILE* file = fopen(path, "r");
     if (!file) {
         fprintf(stderr, "Error opening file: %s\n", path);
         free(board);
@@ -33,6 +33,28 @@ int *read_sudoku(const char *path) {
 
     return board;
 }
+
+int* get_possible_grid(int* grid) {
+    // save the possible entries using bitwise encoding
+    int* poss = (int *)malloc(81 * sizeof(int));
+    
+    // at first everything is possible
+    for (int i = 0; i < 81; i++) {
+        poss[i] = 1022; // 0b1111111110
+    }
+
+    for (int i = 0; i < 81; i++) {
+        if (grid[i] == 0) continue;
+        poss[i] = 1022; // 0b1111111110
+    }
+
+
+}
+
+
+
+
+
 
 int main(int argc, char *argv[]) {
     if (argc < 4) {
