@@ -213,13 +213,13 @@ elif len(sys.argv) != 1:
     print(f"Running {solver.__name__} {n} times...")
     grid = Sudoku.readSudoku(path)
     
-    result = grid
+    result = solver(grid)
     times = []
     bt = BetterTimer()
     for i in range(n):
         grid_copy = grid.copy()
         bt.start()
-        result = Sudoku._solve_bruteforce_v2(grid_copy)
+        result = solver(grid_copy)
         bt.stop()
         times.append(bt.get_time())
 

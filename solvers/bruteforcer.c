@@ -121,6 +121,9 @@ void set(int* grid, int* possible, int i, int j, int new) {
 }
 
 int _solve(int* grid) {
+    // assume grid is free to be modified,
+    // save the result of this iteration into grid
+    printf("I have entered the _solve function\n");
     int* possible = get_possible_grid(grid);
 
     int b, nbits, which;
@@ -128,10 +131,12 @@ int _solve(int* grid) {
     int lpidx = -1;
 
     for (int i = 0; i<81; i++) {
+        printf("%d\n", i);
+        pretty_print_sol(possible);
         if (grid[i] != 0) continue;
         b = possible[i];
         if (b == 0) { // this branch is doomed
-            return -1;
+            return -2;
         }
         if (Only_one_bit_set(b)) {
             which = sizeof(int) * CHAR_BIT - __builtin_clz(b) - 1; // find out which bit was set
@@ -165,7 +170,8 @@ int _solve(int* grid) {
 
 int* solve(char* path) {
     int* grid = read_sudoku(path);
-    _solve(grid);
+    int result = _solve(grid);
+    printf("%d", result);
     return grid;
 }
 

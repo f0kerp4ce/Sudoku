@@ -43,6 +43,7 @@ def getDataForAllSolversAllSudokus(n = 10, config_path = "config.yaml"):
         config = yaml.safe_load(file)
 
     index = 0
+    files_run = []
 
     results = []
 
@@ -51,6 +52,9 @@ def getDataForAllSolversAllSudokus(n = 10, config_path = "config.yaml"):
         if name == "C-Optimized": continue # leave out for now
         build_cmd = solver.get('build')
         run_cmd = solver.get('command')
+        index = files_run.count(run_cmd) # use the next version of the solver
+
+        files_run.append(run_cmd)
         
         print(f"--- Processing: {name} ---")
 
@@ -104,7 +108,7 @@ def main():
     args = parser.parse_args()
 
     if args.path == "all":
-        results = getDataForAllSolversAllSudokus(n = 100)
+        results = getDataForAllSolversAllSudokus(n = args.runs)
 
 
     
