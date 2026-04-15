@@ -1,12 +1,14 @@
-### A repo to test different solvers.
+# A repo to test different solvers.
 
-
-
------------ solver api ------------
+## Solver API
 takes:
-  path: String
-  number_it: int
+
+- path: String
+- number_it: int
+
+
 
 prints:
-SOLUTION:1235...
-TIME_NS:8249368934
+
+- SOLUTION:1235...
+- TIME_NS:8249368934
