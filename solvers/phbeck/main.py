@@ -92,7 +92,9 @@ def main2():
     n = int(sys.argv[2])
     index = int(sys.argv[3])
 
-    solvers = [(lambda board: Sudoku(board).solveSudoku)]
+    solver1 = lambda board: Sudoku(board).solveSudoku()
+    solver1.__name__ = "solve_smart(beck)"
+    solvers = [solver1]
     if index > len(solvers) or index < 0:
         print("ERROR:solver does not exist")
     solver = solvers[index]
@@ -118,7 +120,7 @@ def main2():
     mean_time = times[n//2]
 
     print("LANGUAGE:PYTHON")
-    print("SOLUTION:" + "".join(result[i][j] for i in range(9) for j in range(9)))
+    print("SOLUTION:" + "".join(str(result[i][j]) for i in range(9) for j in range(9)))
     print("MEAN_TIME_NS:" + str(mean_time))
     print("AVG_TIME_NS:" + str(total_time//n))
     print("TOTAL_TIME_NS:" + str(total_time))
