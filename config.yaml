@@ -8,7 +8,11 @@ solvers:
   - name: "PYTHON-phbeck-sudokuSolver"
     command: "python3 solvers/phbeck/main.py"
   
-  - name: "C-bruteforcer.c"
+  - name: "C-bruteforcer.c (with malloc)"
+    build: "gcc -O3 solvers/bruteforcer.c -o solvers/bruteforcer"
+    command: "./solvers/bruteforcer"
+
+  - name: "C-bruteforcer.c (no malloc)"
     build: "gcc -O3 solvers/bruteforcer.c -o solvers/bruteforcer"
     command: "./solvers/bruteforcer"
 
