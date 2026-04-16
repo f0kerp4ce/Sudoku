@@ -1,7 +1,9 @@
 //#include <cstddef>
+#include <bits/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <time.h>
 
 #define Only_one_bit_set(b) (b && !(b & (b - 1)))
 
@@ -25,7 +27,7 @@ int* read_sudoku(const char* path) {
     while ((c = fgetc(file)) != EOF && idx < 81) {
         if (c >= '1' && c <= '9') {
             board[idx++] = c - '0';
-        } else if (c == '.') {
+        } else if (c == '.' || c == '0') {
             board[idx++] = 0;
         }
     }
@@ -71,7 +73,10 @@ int* get_possible_grid(int* grid) {
     int col[9];
     int block[9];
     for (int i = 0; i < 81; i++) {
-        if (grid[i] != 0) continue;
+        // if (grid[i] != 0) {
+        //     poss[i] = 0;
+        //     continue;
+        // }
         // at first everything is possible
         possij = 1022; // 0b1111111110
         ri = i/9;
@@ -81,7 +86,7 @@ int* get_possible_grid(int* grid) {
         get_block(grid, ri, ci, block);
 
         for (int j = 0; j < 9; j++) {
-            possij &= !(1 << row[j]) & !(1<<col[j]) & !(1<<block[j]);
+            possij &= ~(1 << row[j]) & ~(1<<col[j]) & ~(1<<block[j]);
         }
         poss[i] = possij;
     }
@@ -94,6 +99,7 @@ int check(int* grid) { // check the sudoku (very slow)
     for (int i = 0; i<81; i++) {
         sol |= poss[i];
     }
+    free(poss);
     return !sol;
 }
 
@@ -107,7 +113,7 @@ void set(int* grid, int* possible, int i, int j, int new) {
     // &= for every cell in the row, col, block
     int ri = (i/3)*3;
     int cj = (j/3)*3;
-    int mask = !(1<<new);
+    int mask = ~(1<<new);
     for (int k = 0; k<9; k++) {
         // row
         possible[9*i + k] &= mask;
@@ -120,10 +126,16 @@ void set(int* grid, int* possible, int i, int j, int new) {
     possible[9*i+j] = 0; // (remove mask)
 }
 
+void pretty_print_sol(int* sol) {
+    for (int i = 0; i<81; i++) {
+        printf("%d", sol[i]); // print one by one without a newline
+    }
+    printf("\n");
+}
+
 int _solve(int* grid) {
     // assume grid is free to be modified,
     // save the result of this iteration into grid
-    printf("I have entered the _solve function\n");
     int* possible = get_possible_grid(grid);
 
     int b, nbits, which;
@@ -131,17 +143,18 @@ int _solve(int* grid) {
     int lpidx = -1;
 
     for (int i = 0; i<81; i++) {
-        printf("%d\n", i);
-        pretty_print_sol(possible);
         if (grid[i] != 0) continue;
         b = possible[i];
         if (b == 0) { // this branch is doomed
+            free(possible);
             return -2;
         }
         if (Only_one_bit_set(b)) {
-            which = sizeof(int) * CHAR_BIT - __builtin_clz(b) - 1; // find out which bit was set
+            which = __builtin_ctz(b); // find out which bit was set
             set(grid, possible, i/9, i%9, which);
             i = -1; // reset the loop and stay in this frame
+            least_possible = 10;
+            lpidx = -1; 
             continue;
         }
         nbits = __builtin_popcount(b); // intrinsic to count bits set
@@ -150,37 +163,38 @@ int _solve(int* grid) {
             lpidx = i;
         }
     }
+    if (lpidx == -1) {
+        free(possible); // success
+        return 0;
+    }
     // we have found the least number of bits, now recurse
     b = possible[lpidx];
-    for (int i = 0; i<9; i++) {
-        which = sizeof(int) * CHAR_BIT - __builtin_clz(b) - 1;
+    while (b > 0) {
+        which = __builtin_ctz(b); // which possibility to try
         grid[lpidx] = which;
         copy(grid, possible); // possible is not used anymore => use it to copy
         int sol = _solve(possible);
         if (sol == 0) {
             // copy the solution into the old grid
             copy(possible, grid);
+            free(possible);
             return 0;
         }
-        // delete this sol
-        b ^= (1<<which);
+        // delete this possibility
+        b &= (b-1);
     }
+    free(possible);
     return -1; // no solution found
 }
 
 int* solve(char* path) {
     int* grid = read_sudoku(path);
     int result = _solve(grid);
-    printf("%d", result);
     return grid;
 }
 
-void pretty_print_sol(int* sol) {
-    printf("SOLUTION:");
-    for (int i = 0; i<81; i++) {
-        printf("%d", sol[i]); // print one by one without a newline
-    }
-    printf("\n");
+int _solve2(int* grid) {
+    return 0;
 }
 
 
@@ -198,14 +212,38 @@ int main(int argc, char *argv[]) {
     printf("n: %d\n", n);
     printf("version: %d\n", version);
 
+    int (*solver_ptr) (int* );
+    if (version == 0) solver_ptr = &_solve;
+    else solver_ptr = &_solve2;
+
+    // correctness
     int* sol = solve(path);
     int succ = check(sol);
 
+    // timing
+    long long total_ns = 0;
+    struct timespec start, end;
+    int* grid = read_sudoku(path);
+    int* grid_copy = malloc(81 * sizeof(int));
+    for (int i = 0; i<n; i++) {
+        // copy grid
+        copy(grid, grid_copy);
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        solver_ptr(grid_copy); // actual solving
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        total_ns += ((end.tv_sec - start.tv_sec)*1000000000LL + end.tv_nsec - start.tv_nsec);
 
-    // todo
+    }
+
+    free(grid_copy);
+    free(grid);
+
+    // print results
     printf("LANGUAGE:C\n");
-    pretty_print_sol(sol);
-    printf("MEAN_TIME_NS: %d\n", version);
+    printf("SOLUTION:"); pretty_print_sol(sol);
+    printf((succ ? "SUCCESS:TRUE\n" : "SUCCESS:FALSE\n"));
+    printf("MEAN_TIME_NS: %lld\n", total_ns/n);
 
+    free(sol);
     return 0;
 }
