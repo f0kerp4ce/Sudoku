@@ -79,7 +79,7 @@ def getDataForAllSolversAllSudokus(n = 10, config_path = "config.yaml"):
             if validate_solution(data.get("SOLUTION")):
                 correct += 1
 
-        avg_time_ms = sum(times)/n/1000000 # elements of times are already means for a single sudoku
+        avg_time_ms = sum(times)/1000000 # elements of times are already means for a single sudoku
         results.append({"Name": name, "Language": language, "Mean": avg_time_ms, "Correctness": float(correct)/len(spath)})
     return results
     
@@ -103,7 +103,7 @@ def main():
     # first parse the arguments, namely 
     parser = argparse.ArgumentParser(description="Sudoku Solver")
     parser.add_argument("--path", type=str, default="all", help="Path to the sudoku .txt file")
-    parser.add_argument("--runs", type=int, default=1, help="Number of times to run")
+    parser.add_argument("--runs", type=int, default=20, help="Number of times to run")
     
     args = parser.parse_args()
 
