@@ -16,6 +16,10 @@ solvers:
     build: "gcc -O3 solvers/bruteforcer.c -o solvers/bruteforcer"
     command: "./solvers/bruteforcer"
 
+  - name: "C-bruteforcer.c (different masks, Gemini)"
+    build: "gcc -O3 solvers/bruteforcer.c -o solvers/bruteforcer"
+    command: "./solvers/bruteforcer"
+
 sudokus:
   - easy: "data/sudoku0.txt"
   - easy: "data/sudoku1.txt"

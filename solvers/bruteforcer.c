@@ -7,6 +7,13 @@
 
 #define Only_one_bit_set(b) (b && !(b & (b - 1)))
 
+// Globals to track used numbers in rows, columns, and blocks.
+// Bit 'v' is 1 if number 'v' is already placed.
+int row_mask[9] = {0};
+int col_mask[9] = {0};
+int box_mask[9] = {0};
+
+
 
 int* read_sudoku(const char* path) {
     int* board = (int *)malloc(81 * sizeof(int));
@@ -193,8 +200,175 @@ int* solve(char* path) {
     return grid;
 }
 
+void get_possible_grid2(int* grid, int* poss) {
+    // save the possible entries using bitwise encoding
+    int possij;
+    int ri;
+    int ci;
+    int row[9];
+    int col[9];
+    int block[9];
+    for (int i = 0; i < 81; i++) {
+        if (grid[i] != 0) {
+            poss[i] = 0;
+            continue;
+        }
+        // at first everything is possible
+        possij = 1022; // 0b1111111110
+        ri = i/9;
+        ci = i%9;
+        get_row(grid, ri, row);
+        get_column(grid, ci, col);
+        get_block(grid, ri, ci, block);
+
+        for (int j = 0; j < 9; j++) {
+            possij &= ~(1 << row[j]) & ~(1<<col[j]) & ~(1<<block[j]);
+        }
+        poss[i] = possij;
+    }
+}
+
 int _solve2(int* grid) {
-    return 0;
+// assume grid is free to be modified,
+    // save the result of this iteration into grid
+    int possible[81];
+    get_possible_grid2(grid, possible);
+
+    int b, nbits, which;
+    int least_possible = 10;
+    int lpidx = -1;
+
+    for (int i = 0; i<81; i++) {
+        if (grid[i] != 0) continue;
+        b = possible[i];
+        if (b == 0) { // this branch is doomed
+            return -2;
+        }
+        if (Only_one_bit_set(b)) {
+            which = __builtin_ctz(b); // find out which bit was set
+            set(grid, possible, i/9, i%9, which);
+            i = -1; // reset the loop and stay in this frame
+            least_possible = 10;
+            lpidx = -1; 
+            continue;
+        }
+        nbits = __builtin_popcount(b); // intrinsic to count bits set
+        if (nbits < least_possible) {
+            least_possible = nbits;
+            lpidx = i;
+        }
+    }
+    if (lpidx == -1) {
+        return 0;
+    }
+    // we have found the least number of bits, now recurse
+    b = possible[lpidx];
+    while (b > 0) {
+        which = __builtin_ctz(b); // which possibility to try
+        grid[lpidx] = which;
+        copy(grid, possible); // possible is not used anymore => use it to copy
+        int sol = _solve2(possible);
+        if (sol == 0) {
+            // copy the solution into the old grid
+            copy(possible, grid);
+            return 0;
+        }
+        // delete this possibility
+        b &= (b-1);
+    }
+    return -1; // no solution found
+}
+
+
+// Helper to get block index
+static inline int get_box(int r, int c) {
+    return (r / 3) * 3 + (c / 3);
+}
+
+// Initialize masks based on the starting grid
+void init_masks(int* grid) {
+    for (int i = 0; i < 9; i++) {
+        row_mask[i] = 0; col_mask[i] = 0; box_mask[i] = 0;
+    }
+    for (int i = 0; i < 81; i++) {
+        if (grid[i] != 0) {
+            int r = i / 9;
+            int c = i % 9;
+            int v = grid[i];
+            row_mask[r] |= (1 << v);
+            col_mask[c] |= (1 << v);
+            box_mask[get_box(r, c)] |= (1 << v);
+        }
+    }
+}
+
+int _solve_fast(int* grid) {
+    int best_i = -1;
+    int min_poss = 10;
+    int best_mask = 0;
+
+    // 1. Find the cell with the Minimum Remaining Values (MRV)
+    for (int i = 0; i < 81; i++) {
+        if (grid[i] == 0) {
+            int r = i / 9;
+            int c = i % 9;
+            int b = get_box(r, c);
+            
+            // O(1) check for available numbers (Bits 1-9)
+            int mask = ~(row_mask[r] | col_mask[c] | box_mask[b]) & 0x3FE;
+            
+            if (mask == 0) return -1; // Dead end, backtrack
+            
+            int nbits = __builtin_popcount(mask);
+            if (nbits < min_poss) {
+                min_poss = nbits;
+                best_i = i;
+                best_mask = mask;
+                
+                // Early exit: you can't beat 1 possibility
+                if (nbits == 1) break; 
+            }
+        }
+    }
+
+    // If no empty cells were found, the puzzle is solved
+    if (best_i == -1) return 0;
+
+    int r = best_i / 9;
+    int c = best_i % 9;
+    int b = get_box(r, c);
+
+    // 2. Try all possibilities for the best cell
+    while (best_mask > 0) {
+        int val = __builtin_ctz(best_mask); // Extract lowest set bit
+        
+        // Apply guess
+        grid[best_i] = val;
+        row_mask[r] |= (1 << val);
+        col_mask[c] |= (1 << val);
+        box_mask[b] |= (1 << val);
+
+        // Recurse
+        if (_solve_fast(grid) == 0) {
+            return 0; // Success propagates up
+        }
+
+        // Undo guess (Backtrack)
+        grid[best_i] = 0;
+        row_mask[r] &= ~(1 << val);
+        col_mask[c] &= ~(1 << val);
+        box_mask[b] &= ~(1 << val);
+
+        // Clear the tried bit
+        best_mask &= (best_mask - 1); 
+    }
+
+    return -1; // No valid numbers worked, trigger backtrack
+}
+
+int _solve3(int* grid) {
+    init_masks(grid);
+    return _solve_fast(grid);
 }
 
 
