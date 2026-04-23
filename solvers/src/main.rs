@@ -1,3 +1,5 @@
+use std::{fs, iter::Skip};
+
 #[derive(Debug, Clone)]
 struct Sudoku {
     board: [u8; 81], // regular, contains correct solution after bruteforce
@@ -15,6 +17,31 @@ struct Sudoku {
 // 6 7 8
 
 impl Sudoku {
+    fn read_from_path(&mut self) {
+        let contents = fs::read_to_string("example.txt")
+            .expect("Should have been able to read the file");
+        let vec: Vec<u8>= contents
+            .chars()
+            .map(|c| {
+                match c {
+                    '.' => 0,
+                    '1' ..= '9' => c.to_digit(10).unwrap_or(0) as u8,
+                    _ => 0,
+                }
+            }).take(81).collect();
+
+        self.board = vec.try_into().expect("file had less than 81 elements");
+
+        // update other boards
+        for i in 0..9 {
+            for j in 0..9 {
+                self.tboard[j*9+i] = self.board[i*9 + j];
+                self.bboard[(i/3)*27 + j%3 + (i%3)*3 + (j/3)*9] = self.board[i*9 + j];
+            }
+        }
+        self.init_notes();
+    }
+
     fn init_notes(&mut self) {
         self.notes = [1022; 81];
         self.tnotes = [1022; 81];
