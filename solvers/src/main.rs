@@ -50,6 +50,7 @@ impl Sudoku {
     fn solve(&mut self) {
         loop {
             if self.obvious_single() {continue}
+            if self.hidden_singles() {continue}
         }
     }
 
@@ -86,24 +87,51 @@ impl Sudoku {
             let block = self.get_notes_box(i);
             // array [u16; 9] where appearance in field i is 1 for each field, number
             
-            // check if there is only one possibility
-            for j in 0..9 {
-                if row[j].count_ones() == 1 {
-                    self.set(i, j, row[j].trailing_zeros() as u8);
-                    return true;
+            // check if there is only one possibility for a number
+            let mut row_counts = [0u16; 9];
+            let mut col_counts = [0u16; 9];
+            let mut block_counts = [0u16; 9];
+
+            for n in 1..10 {
+                // count occurences of 'n'
+                let mask = 1<<n;
+                for j in 0..9 {
+                    row_counts[n] += (row[j] & mask) >> n;
+                    col_counts[n] += (col[j] & mask) >> n;
+                    block_counts[n] += (block[n] & mask) >> n;
                 }
-                else if col[j].count_ones() == 1 {
-                    self.set(j, i, col[j].trailing_zeros() as u8);
-                    return true;
+                // check if there is a number with only one occurence
+                if row_counts[n] == 1 {
+                    // find which field is the hidden single
+                    for j in 0..9 {
+                        if row[j] & mask != 0 {
+                            self.set(i, j, row[n].trailing_zeros() as u8);
+                            return true;
+                        }
+                    }
                 }
-                else if block[j].count_ones() == 1 {
-                    // 'i' is block number; 'j' is position inside block
-                    self.set((i/3)*27 + j/3, (i%3)*9 + j%3, block[j].trailing_zeros() as u8);
-                    return true;
+                if col_counts[n] == 1 {
+                    for j in 0..9 {
+                        if col[j] & mask != 0 {
+                            self.set(j, i, col[j].trailing_zeros() as u8);
+                            return true;
+                        }
+                    }
                 }
+                if block_counts[n] == 1 {
+                    for j in 0..9 {
+                        if block[j] & mask != 0 {
+                            // i is block number, j is number within block
+                            self.set((i/3)*27 + j/3, (i%3)*9 + j%3, block[n].trailing_zeros() as u8);
+                            return true;
+                        }
+                    }
+                }
+                // n is not a hidden single
             }
+            // go to next row/col/block
         }
-        false
+        false // no hidden single exists
     }
 
     fn set(&mut self, i: usize, j: usize, v: u8) {
