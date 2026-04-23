@@ -1,4 +1,4 @@
-use std::{fs, iter::Skip};
+use std::{fs};
 
 #[derive(Debug, Clone)]
 struct Sudoku {
@@ -16,9 +16,21 @@ struct Sudoku {
 // 3 4 5
 // 6 7 8
 
+impl Default for Sudoku {
+    fn default() -> Self {
+        Self { board: [0; 81], tboard: [0; 81], bboard: [0; 81], notes: [0; 81], tnotes: [0; 81], bnotes: [0; 81] }
+    }
+}
+
 impl Sudoku {
-    fn read_from_path(&mut self) {
-        let contents = fs::read_to_string("example.txt")
+    fn new_from_path(path: String) -> Self {
+        let mut s: Sudoku = Sudoku::default();
+        s.read_from_path(path);
+        s
+    }
+
+    fn read_from_path(&mut self, path: String) {
+        let contents = fs::read_to_string(path)
             .expect("Should have been able to read the file");
         let vec: Vec<u8>= contents
             .chars()
@@ -52,7 +64,9 @@ impl Sudoku {
                 let curr = self.board[i*9 + j];
                 if curr == 0 {continue}
                 let mask = !(1u16 << curr); // e.g. curr = 3  =>  mask = 0b..11110111
-                let box_idx: usize = (i*3)%9 + (i/3)*27 + (j%3) +(j/3)*9;// 0..9
+                let box_idx = j/3 + (i/3)*3;
+                let bi = (i/3)*3;
+                let bj = (j/3)*3;
                 // update notes for:
                 for k in 0..9 {
                     // for row i
@@ -66,16 +80,17 @@ impl Sudoku {
                     let box_col_idx = (k*3)%9 + (k/3)*27 + (j%3) + (j/3)*9;
                     self.bnotes[box_col_idx] &= mask;
                     // for box ´box_idx´
-                    self.notes[9*(i/3 + k/3)*3 + (j/3)*3 + k%3] &= mask;
-                    self.tnotes[9*(j/3 + k/3)*3 + (i/3)*3 + k%3] &= mask;
-                    self.bnotes[box_idx + k] &= mask;
+                    self.notes[9*(bi + k/3) + bj + k%3] &= mask;
+                    self.tnotes[9*(bj + k/3)+ bi + k%3] &= mask;
+                    self.bnotes[9*box_idx + k] &= mask;
                 }
             }
         }
     }
 
     fn solve(&mut self) -> bool {
-        while (!self.check()) {
+        while !self.check() {
+            // maybe add preferred next units
             if self.obvious_single() {continue}
             if self.hidden_singles() {continue}
 
@@ -257,7 +272,13 @@ impl Sudoku {
 
 
 fn main() {
-    println!("Hello, world!");
+    let mut s = Sudoku::new_from_path("../data/sudoku0.txt".to_string());
+    
+    println!("{:#?}", s);
+
+    s.solve();
+    
+    println!("{:#?}", s);
 }
 
 
