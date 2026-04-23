@@ -1,6 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Sudoku {
-    board: [u8; 81], // regular
+    board: [u8; 81], // regular, contains correct solution after bruteforce
     tboard: [u8; 81], // column major stored
     bboard: [u8; 81], // box major stored
 
@@ -47,11 +47,50 @@ impl Sudoku {
         }
     }
 
-    fn solve(&mut self) {
-        loop {
+    fn solve(&mut self) -> bool {
+        while (!self.check()) {
             if self.obvious_single() {continue}
             if self.hidden_singles() {continue}
+
+            // else bruteforce
+            return self.bruteforce();
         }
+        self.check()
+    }
+
+    fn check(&self) -> bool {
+        return !self.notes.iter().any(|&field| field != 0);
+    }
+
+    fn bruteforce(&mut self) -> bool {
+        // go through every field, check possibilities and 
+        // pick field with the least number of possibilities
+        let mut nposs = 10;
+        let mut lp_pos = 10000;
+
+        for i in 0..81 {
+            let curr = self.notes[i];
+            if curr.count_ones() < nposs {
+                nposs = curr.count_ones();
+                lp_pos = i;
+            }
+        }
+        if nposs == 0 || nposs == 10 {return false}
+        let mut curr = self.notes[lp_pos];
+        while curr != 0 {
+            let test_n = curr.trailing_zeros();
+            let mut s = self.clone(); // deep copy, we can keep all the data except for the field we change
+            s.set(lp_pos/9, lp_pos%9, test_n as u8);
+            if s.solve() {
+                self.board = s.board;
+                return true;
+            } // solve recursively
+            // decrement current
+            curr &= (curr-1);
+        }
+        
+        
+        false
     }
 
     fn obvious_single(&mut self) -> bool {
