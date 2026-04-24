@@ -1,4 +1,4 @@
-use std::{fs};
+use std::{fmt, fs};
 
 #[derive(Debug, Clone)]
 struct Sudoku {
@@ -19,6 +19,18 @@ struct Sudoku {
 impl Default for Sudoku {
     fn default() -> Self {
         Self { board: [0; 81], tboard: [0; 81], bboard: [0; 81], notes: [0; 81], tnotes: [0; 81], bnotes: [0; 81] }
+    }
+}
+
+impl fmt::Display for Sudoku {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..81 {
+            if i%27 == 0 {writeln!(f, "\n").expect("issue with writeln!");}
+            else if i%9 == 0 {writeln!(f, "").expect("issue with writeln!");}
+            else if i%3 == 0 {write!(f, " ").expect("issue with write!");}
+            write!(f, "{}", self.board[i]).expect("could not write a field of the sudoku");
+        }
+        Ok(())
     }
 }
 
@@ -280,11 +292,11 @@ impl Sudoku {
 fn main() {
     let mut s = Sudoku::new_from_path("../data/sudoku0.txt".to_string());
     
-    println!("{:?}", s);
+    println!("{}", s);
 
     s.solve();
     
-    println!("{:?}", s);
+    println!("{}", s);
 }
 
 
