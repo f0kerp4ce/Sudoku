@@ -153,7 +153,8 @@ impl Sudoku {
                 }
                 else if block[j].count_ones() == 1 {
                     // 'i' is block number; 'j' is position inside block
-                    self.set((i/3)*27 + j/3, (i%3)*9 + j%3, block[j].trailing_zeros() as u8);
+                    // we want new_i := row number and new_j := col number
+                    self.set((i/3)*3 + j/3, (i%3)*3 + j%3, block[j].trailing_zeros() as u8);
                     return true;
                 }
             }
@@ -169,9 +170,9 @@ impl Sudoku {
             // array [u16; 9] where appearance in field i is 1 for each field, number
             
             // check if there is only one possibility for a number
-            let mut row_counts = [0u16; 9];
-            let mut col_counts = [0u16; 9];
-            let mut block_counts = [0u16; 9];
+            let mut row_counts = [0u16; 10];
+            let mut col_counts = [0u16; 10];
+            let mut block_counts = [0u16; 10];
 
             for n in 1..10 {
                 // count occurences of 'n'
@@ -179,31 +180,34 @@ impl Sudoku {
                 for j in 0..9 {
                     row_counts[n] += (row[j] & mask) >> n;
                     col_counts[n] += (col[j] & mask) >> n;
-                    block_counts[n] += (block[n] & mask) >> n;
+                    block_counts[n] += (block[j] & mask) >> n;
                 }
                 // check if there is a number with only one occurence
                 if row_counts[n] == 1 {
                     // find which field is the hidden single
                     for j in 0..9 {
-                        if row[j] & mask != 0 {
-                            self.set(i, j, row[n].trailing_zeros() as u8);
+                        let masked_row = row[j] & mask;
+                        if masked_row != 0 {
+                            self.set(i, j, masked_row.trailing_zeros() as u8);
                             return true;
                         }
                     }
                 }
                 if col_counts[n] == 1 {
                     for j in 0..9 {
-                        if col[j] & mask != 0 {
-                            self.set(j, i, col[j].trailing_zeros() as u8);
+                        let masked_col = col[j] & mask;
+                        if masked_col != 0 {
+                            self.set(j, i, masked_col.trailing_zeros() as u8);
                             return true;
                         }
                     }
                 }
                 if block_counts[n] == 1 {
                     for j in 0..9 {
-                        if block[j] & mask != 0 {
+                        let masked_block = block[j] & mask;
+                        if masked_block != 0 {
                             // i is block number, j is number within block
-                            self.set((i/3)*27 + j/3, (i%3)*9 + j%3, block[n].trailing_zeros() as u8);
+                            self.set((i/3)*27 + j/3, (i%3)*9 + j%3, masked_block.trailing_zeros() as u8);
                             return true;
                         }
                     }
@@ -216,10 +220,12 @@ impl Sudoku {
     }
 
     fn set(&mut self, i: usize, j: usize, v: u8) {
+        dbg!(i, j, v);
         self.board[i*9 + j] = v;
         self.tboard[j*9 + i] = v;
-        let box_idx: usize = (i*3)%9 + (i/3)*27 + (j%3) +(j/3)*9;// 0..9
-        self.bboard[box_idx] = v;
+        let single_box_idx: usize = (i*3)%9 + (i/3)*27 + (j%3) +(j/3)*9;
+        self.bboard[single_box_idx] = v;
+        let box_idx = (i/3)*3 + (j/3); // 0..9
 
         // update notes
         let mask = !(1u16 << v); // e.g. v = 3  =>  mask = 0b..11110111
@@ -236,9 +242,9 @@ impl Sudoku {
             let box_col_idx = (k*3)%9 + (k/3)*27 + (j%3) + (j/3)*9;
             self.bnotes[box_col_idx] &= mask;
             // for box ´box_idx´
-            self.notes[9*(i/3 + k/3)*3 + (j/3)*3 + k%3] &= mask;
-            self.tnotes[9*(j/3 + k/3)*3 + (i/3)*3 + k%3] &= mask;
-            self.bnotes[box_idx + k] &= mask;
+            self.notes[((i/3)*3 + k/3)*9 + ((j/3)*3 + k%3)] &= mask;
+            self.tnotes[((j/3)*3 + k/3)*9 +((i/3)*3 + k%3)] &= mask;
+            self.bnotes[9 * box_idx + k] &= mask;
         }
     }
 
@@ -274,11 +280,11 @@ impl Sudoku {
 fn main() {
     let mut s = Sudoku::new_from_path("../data/sudoku0.txt".to_string());
     
-    println!("{:#?}", s);
+    println!("{:?}", s);
 
     s.solve();
     
-    println!("{:#?}", s);
+    println!("{:?}", s);
 }
 
 
