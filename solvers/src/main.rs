@@ -74,7 +74,18 @@ impl Sudoku {
         for i in 0..9 {
             for j in 0..9 {
                 let curr = self.board[i*9 + j];
-                if curr == 0 {continue}
+                //if curr == 0 {continue}
+                // clear notes for fields that are already present
+                if self.board[9*i+j] != 0 {
+                    self.notes[9*i+j] = 0;
+                }
+                if self.tboard[9*i+j] != 0 {
+                    self.tnotes[9*i+j] = 0;
+                }
+                if self.bboard[9*i+j] != 0 {
+                    self.bnotes[9*i+j] = 0;
+                }
+                
                 let mask = !(1u16 << curr); // e.g. curr = 3  =>  mask = 0b..11110111
                 let box_idx = j/3 + (i/3)*3;
                 let bi = (i/3)*3;
@@ -102,9 +113,10 @@ impl Sudoku {
 
     fn solve(&mut self) -> bool {
         while !self.check() {
+            println!("{}", self);
             // maybe add preferred next units
-            if self.obvious_single() {continue}
-            if self.hidden_singles() {continue}
+            if self.obvious_single() {print!("applied an obvious single\n"); continue}
+            if self.hidden_singles() {print!("applied a hidden single\n"); continue}
 
             // else bruteforce
             return self.bruteforce();
@@ -148,25 +160,26 @@ impl Sudoku {
     }
 
     fn obvious_single(&mut self) -> bool {
+        // check each row, col and block and find fields where only one number is possible
         for i in 0..9 {
-            let row = self.get_notes_row(i);
-            let col = self.get_notes_col(i);
-            let block = self.get_notes_box(i);
+            let notes_row = self.get_notes_row(i);
+            let notes_col = self.get_notes_col(i);
+            let notes_block = self.get_notes_box(i);
             
             // check if there is only one possibility
             for j in 0..9 {
-                if row[j].count_ones() == 1 {
-                    self.set(i, j, row[j].trailing_zeros() as u8);
+                if notes_row[j].count_ones() == 1 {
+                    self.set(i, j, notes_row[j].trailing_zeros() as u8);
                     return true;
                 }
-                else if col[j].count_ones() == 1 {
-                    self.set(j, i, col[j].trailing_zeros() as u8);
+                else if notes_col[j].count_ones() == 1 {
+                    self.set(j, i, notes_col[j].trailing_zeros() as u8);
                     return true;
                 }
-                else if block[j].count_ones() == 1 {
+                else if notes_block[j].count_ones() == 1 {
                     // 'i' is block number; 'j' is position inside block
                     // we want new_i := row number and new_j := col number
-                    self.set((i/3)*3 + j/3, (i%3)*3 + j%3, block[j].trailing_zeros() as u8);
+                    self.set((i/3)*3 + j/3, (i%3)*3 + j%3, notes_block[j].trailing_zeros() as u8);
                     return true;
                 }
             }
@@ -176,9 +189,9 @@ impl Sudoku {
 
     fn hidden_singles(&mut self) -> bool {
         for i in 0..9 {
-            let row = self.get_notes_row(i);
-            let col = self.get_notes_col(i);
-            let block = self.get_notes_box(i);
+            let notes_row = self.get_notes_row(i);
+            let notes_col = self.get_notes_col(i);
+            let notes_block = self.get_notes_box(i);
             // array [u16; 9] where appearance in field i is 1 for each field, number
             
             // check if there is only one possibility for a number
@@ -190,15 +203,15 @@ impl Sudoku {
                 // count occurences of 'n'
                 let mask = 1<<n;
                 for j in 0..9 {
-                    row_counts[n] += (row[j] & mask) >> n;
-                    col_counts[n] += (col[j] & mask) >> n;
-                    block_counts[n] += (block[j] & mask) >> n;
+                    row_counts[n] += (notes_row[j] & mask) >> n;
+                    col_counts[n] += (notes_col[j] & mask) >> n;
+                    block_counts[n] += (notes_block[j] & mask) >> n;
                 }
                 // check if there is a number with only one occurence
                 if row_counts[n] == 1 {
                     // find which field is the hidden single
                     for j in 0..9 {
-                        let masked_row = row[j] & mask;
+                        let masked_row = notes_row[j] & mask;
                         if masked_row != 0 {
                             self.set(i, j, masked_row.trailing_zeros() as u8);
                             return true;
@@ -207,7 +220,7 @@ impl Sudoku {
                 }
                 if col_counts[n] == 1 {
                     for j in 0..9 {
-                        let masked_col = col[j] & mask;
+                        let masked_col = notes_col[j] & mask;
                         if masked_col != 0 {
                             self.set(j, i, masked_col.trailing_zeros() as u8);
                             return true;
@@ -216,7 +229,7 @@ impl Sudoku {
                 }
                 if block_counts[n] == 1 {
                     for j in 0..9 {
-                        let masked_block = block[j] & mask;
+                        let masked_block = notes_block[j] & mask;
                         if masked_block != 0 {
                             // i is block number, j is number within block
                             self.set((i/3)*27 + j/3, (i%3)*9 + j%3, masked_block.trailing_zeros() as u8);
@@ -234,9 +247,13 @@ impl Sudoku {
     fn set(&mut self, i: usize, j: usize, v: u8) {
         dbg!(i, j, v);
         self.board[i*9 + j] = v;
+        self.notes[i*9 + j] = 0; // delete notes for this field
         self.tboard[j*9 + i] = v;
+        self.tnotes[j*9 + i] = 0;
         let single_box_idx: usize = (i*3)%9 + (i/3)*27 + (j%3) +(j/3)*9;
         self.bboard[single_box_idx] = v;
+        self.bnotes[single_box_idx] = 0;
+
         let box_idx = (i/3)*3 + (j/3); // 0..9
 
         // update notes
