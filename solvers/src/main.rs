@@ -1,4 +1,5 @@
-use std::{fmt, fs};
+use std::{fmt, fs, env};
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 struct Sudoku {
@@ -154,7 +155,7 @@ impl Sudoku {
                 return true;
             } // solve recursively
             // decrement current
-            curr &= (curr-1);
+            curr &= curr-1;
         }
         
         
@@ -309,15 +310,56 @@ impl Sudoku {
 
 
 fn main() {
-    let mut s = Sudoku::new_from_path("../data/sudoku0.txt".to_string());
-    
-    println!("{}", s);
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 4 {
+        eprintln!("Usage: {} <path> <n> <version>", args[0]);
+        std::process::exit(1);
+    }
 
-    s.solve();
+    let path = &args[1];
+    let n: u32 = args[2].parse().expect("n must be a valid integer");
+    let version: i32 = args[3].parse().expect("version must be a valid integer");
 
-    println!("{}", if s.check() {"sudoku solved correctly".to_string()} else {"there is some mistake".to_string()});
+    println!("path: {}", path);
+    println!("n: {}", n);
+    println!("version: {}", version);
+
+    // Read the grid once to avoid file I/O during the benchmarking loop
+    let initial_grid = Sudoku::new_from_path(path.to_string());
     
-    println!("{}", s);
+    // We will store the result of the final run to check correctness and print
+    let mut final_grid = initial_grid.clone();
+    
+    let mut total_ns: u128 = 0;
+
+    for _ in 0..n {
+        // Create a fresh copy for the solver, matching the C implementation
+        let mut grid_copy = initial_grid.clone();
+        
+        let start = Instant::now();
+        // Since the current Rust code has one solve version, we just call it directly. 
+        // If you implement a second algorithm later, you can branch on `version` here.
+        grid_copy.solve(); 
+        let elapsed = start.elapsed();
+        
+        total_ns += elapsed.as_nanos();
+        final_grid = grid_copy; 
+    }
+
+    let succ = final_grid.check();
+
+    // Print results
+    println!("LANGUAGE:RUST");
+    
+    // Printing the solution as a flat array to mimic a typical pretty_print_sol 
+    print!("SOLUTION: ");
+    for val in final_grid.board.iter() {
+        print!("{}", val);
+    }
+    println!();
+    
+    println!("SUCCESS:{}", if succ { "TRUE" } else { "FALSE" });
+    println!("MEAN_TIME_NS: {}", total_ns / (n as u128));
 }
 
 
