@@ -119,6 +119,7 @@ impl Sudoku {
             if self.hidden_singles() {print!("applied a hidden single\n"); continue}
 
             // else bruteforce
+            println!("applied a bruteforce");
             return self.bruteforce();
         }
         self.check()
@@ -147,6 +148,7 @@ impl Sudoku {
             let test_n = curr.trailing_zeros();
             let mut s = self.clone(); // deep copy, we can keep all the data except for the field we change
             s.set(lp_pos/9, lp_pos%9, test_n as u8);
+            println!("trying a bruteforce");
             if s.solve() {
                 self.board = s.board;
                 return true;
@@ -232,7 +234,7 @@ impl Sudoku {
                         let masked_block = notes_block[j] & mask;
                         if masked_block != 0 {
                             // i is block number, j is number within block
-                            self.set((i/3)*27 + j/3, (i%3)*9 + j%3, masked_block.trailing_zeros() as u8);
+                            self.set((i/3)*3 + j/3, (i%3)*3 + j%3, masked_block.trailing_zeros() as u8);
                             return true;
                         }
                     }
@@ -312,6 +314,8 @@ fn main() {
     println!("{}", s);
 
     s.solve();
+
+    println!("{}", if s.check() {"sudoku solved correctly".to_string()} else {"there is some mistake".to_string()});
     
     println!("{}", s);
 }
