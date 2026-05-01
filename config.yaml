@@ -20,6 +20,11 @@ solvers:
     build: "gcc -O3 solvers/bruteforcer.c -o solvers/bruteforcer.out"
     command: "./solvers/bruteforcer.out"
 
+  - name: "Rust-smartsolver"
+    cwd: "./solvers"
+    build: "cargo build --release"
+    command: "./solvers/target/debug/smartsolver"
+
 sudokus:
   - easy: "data/sudoku0.txt"
   - easy: "data/sudoku1.txt"

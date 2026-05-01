@@ -49,8 +49,8 @@ def getDataForAllSolversAllSudokus(n = 10, config_path = "config.yaml"):
 
     for solver in config.get('solvers', []):
         name = solver.get('name')
-        if name == "C-Optimized": continue # leave out for now
         build_cmd = solver.get('build')
+        cwd = solver.get('cwd')
         run_cmd = solver.get('command')
         index = files_run.count(run_cmd) # use the next version of the solver
 
@@ -61,7 +61,8 @@ def getDataForAllSolversAllSudokus(n = 10, config_path = "config.yaml"):
         # 3. Build it (if a build command exists)
         if build_cmd:
             print(f"Building {name}...")
-            subprocess.run(build_cmd, shell=True, check=True)
+            if cwd: subprocess.run(build_cmd, cwd=cwd, shell=True, check=True)
+            else: subprocess.run(build_cmd, shell=True, check=True)
 
         times = [] # collect all times for the different sudokus
         correct = 0
@@ -80,7 +81,7 @@ def getDataForAllSolversAllSudokus(n = 10, config_path = "config.yaml"):
                 correct += 1
 
         avg_time_ms = sum(times)/1000000 # elements of times are already means for a single sudoku
-        results.append({"Name": name, "Language": language, "Mean": avg_time_ms, "Correctness": float(correct)/len(spath)})
+        results.append({"Name": name, "Language": language, "Mean (ms)": avg_time_ms, "Correctness": float(correct)/len(spath)})
     return results
     
     
@@ -114,7 +115,7 @@ def main():
     
     # Create the Score Table
     df = pd.DataFrame(results)
-    summary = df.groupby("Name")["Mean"].mean().sort_values()
+    summary = df.groupby("Name")["Mean (ms)"].mean().sort_values()
     print(summary)
 
 

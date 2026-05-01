@@ -11,6 +11,8 @@ struct Sudoku {
     tnotes: [u16; 81],
     bnotes: [u16; 81],
 
+    lm_row: usize,
+    lm_col: usize,
 }
 // box major: (boxes & inside boxes)
 // 0 1 2
@@ -19,7 +21,7 @@ struct Sudoku {
 
 impl Default for Sudoku {
     fn default() -> Self {
-        Self { board: [0; 81], tboard: [0; 81], bboard: [0; 81], notes: [0; 81], tnotes: [0; 81], bnotes: [0; 81] }
+        Self { board: [0; 81], tboard: [0; 81], bboard: [0; 81], notes: [0; 81], tnotes: [0; 81], bnotes: [0; 81], lm_col: 0, lm_row: 0 }
     }
 }
 
@@ -65,6 +67,39 @@ impl Sudoku {
             }
         }
         self.init_notes();
+    }
+
+    fn init_notes2(&mut self) {
+        self.notes = [1022; 81];
+        self.tnotes = [1022; 81];
+        self.bnotes = [1022; 81];
+
+        for i in 0..81 {
+            if self.board[i] != 0 {
+                self.notes[i] = 0;
+            }
+            if self.tboard[i] != 0 {
+                self.tnotes[i] = 0;
+            }
+            if self.bboard[i] != 0 {
+                self.bnotes[i] = 0;
+            }
+
+            let row = self.get_row(i/9);
+            let col = self.get_col(i%9);
+            let block = self.get_box(((i/3)%3) + (i/27)*3);
+            let mut poss = self.notes[i];
+            if poss != 0 {
+                for j in 0..9 {
+                    poss &= !(1u16 << row[j]);
+                    poss &= !(1u16 << col[j]);
+                    poss &= !(1u16 << block[j]);
+                }
+                self.notes[i] = poss;
+                self.tnotes[(i%9)*9 + i/9] &= poss;
+                self.bnotes[(i/27 + (i%9)/3) * 9 + i%3 +((i/9)%3)*3];
+            }
+        }
     }
 
     fn init_notes(&mut self) {
@@ -114,16 +149,15 @@ impl Sudoku {
 
     fn solve(&mut self) -> bool {
         while !self.check() {
-            println!("{}", self);
             // maybe add preferred next units
-            if self.obvious_single() {print!("applied an obvious single\n"); continue}
-            if self.hidden_singles() {print!("applied a hidden single\n"); continue}
+            if self.obvious_single_after_insert(self.lm_col, self.lm_row) {continue}
+            if self.obvious_single() {continue}
+            if self.hidden_single() {continue}
 
             // else bruteforce
-            println!("applied a bruteforce");
             return self.bruteforce();
         }
-        self.check()
+        true
     }
 
     fn check(&self) -> bool {
@@ -149,7 +183,6 @@ impl Sudoku {
             let test_n = curr.trailing_zeros();
             let mut s = self.clone(); // deep copy, we can keep all the data except for the field we change
             s.set(lp_pos/9, lp_pos%9, test_n as u8);
-            println!("trying a bruteforce");
             if s.solve() {
                 self.board = s.board;
                 return true;
@@ -190,8 +223,32 @@ impl Sudoku {
         false // no obvious single exists
     }
 
-    fn hidden_singles(&mut self) -> bool {
-        for i in 0..9 {
+    fn obvious_single_after_insert(&mut self, row: usize, col: usize) -> bool {
+        let notes_row = self.get_notes_row(row);
+        let notes_col = self.get_notes_col(col);
+        let notes_block = self.get_notes_box((row/3)*3 + col%3);
+        for j in 0..9 {
+            if notes_row[j].count_ones() == 1 {
+                self.set(row, j, notes_row[j].trailing_zeros() as u8);
+                return true;
+            }
+            else if notes_col[j].count_ones() == 1 {
+                self.set(j, col, notes_col[j].trailing_zeros() as u8);
+                return true;
+            }
+            else if notes_block[j].count_ones() == 1 {
+                // 'j' is position inside block
+                // we want new_i := row number and new_j := col number
+                self.set((row/3)*3 + j/3, (col/3)*3 + j%3, notes_block[j].trailing_zeros() as u8);
+                return true;
+            }
+        }
+        false
+    }
+
+    fn hidden_single(&mut self) -> bool {
+        let changed = vec![self.lm_row, self.lm_col]; // maybe add boxes
+        for i in changed.into_iter().chain(0..9) {
             let notes_row = self.get_notes_row(i);
             let notes_col = self.get_notes_col(i);
             let notes_block = self.get_notes_box(i);
@@ -248,7 +305,6 @@ impl Sudoku {
     }
 
     fn set(&mut self, i: usize, j: usize, v: u8) {
-        dbg!(i, j, v);
         self.board[i*9 + j] = v;
         self.notes[i*9 + j] = 0; // delete notes for this field
         self.tboard[j*9 + i] = v;
@@ -278,6 +334,8 @@ impl Sudoku {
             self.tnotes[((j/3)*3 + k/3)*9 +((i/3)*3 + k%3)] &= mask;
             self.bnotes[9 * box_idx + k] &= mask;
         }
+        self.lm_row = i;
+        self.lm_col = j;
     }
 
     fn get_row(&self, i: usize) -> &[u8] {
@@ -352,14 +410,14 @@ fn main() {
     println!("LANGUAGE:RUST");
     
     // Printing the solution as a flat array to mimic a typical pretty_print_sol 
-    print!("SOLUTION: ");
+    print!("SOLUTION:");
     for val in final_grid.board.iter() {
         print!("{}", val);
     }
     println!();
     
     println!("SUCCESS:{}", if succ { "TRUE" } else { "FALSE" });
-    println!("MEAN_TIME_NS: {}", total_ns / (n as u128));
+    println!("MEAN_TIME_NS:{}", total_ns / (n as u128));
 }
 
 
