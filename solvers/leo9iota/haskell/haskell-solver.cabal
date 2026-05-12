@@ -3,8 +3,6 @@ name:               haskell-solver
 version:            0.1.0.0
 synopsis:           Sudoku solver written in Haskell
 homepage:           https://github.com/leo9iota
-license:            BSD-3-Clause
-license-file:       LICENSE
 author:             leo9iota
 maintainer:         117021032+leo9iota@users.noreply.github.com
 category:           Game
