@@ -1,2 +1,12 @@
+# other stuff
 *.out
 *.pyc
+__pycache__/
+
+# rust
+solvers/target/
+
+# haskell
+dist-newstyle/
+*.hi
+*.o
