@@ -2,3 +2,7 @@
 
 default:
     @just --list
+
+# Build .hs files via Cabal
+build:
+    cabal build
