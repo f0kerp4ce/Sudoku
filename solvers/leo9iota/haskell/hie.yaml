@@ -1,0 +1,6 @@
+cradle:
+  cabal:
+    - path: "app/Main.hs"
+      component: "exe:haskell-solver"
+    - path: "app/Solver.hs"
+      component: "exe:haskell-solver"
