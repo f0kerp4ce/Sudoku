@@ -1,0 +1,4 @@
+# justfile config
+
+default:
+    @just --list
