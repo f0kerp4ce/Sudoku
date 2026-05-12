@@ -6,3 +6,6 @@ default:
 # Build .hs files via Cabal
 build:
     cabal build
+
+run:
+    cabal run
