@@ -161,7 +161,7 @@ impl Sudoku {
     }
 
     fn check(&self) -> bool {
-        return !self.notes.iter().any(|&field| field != 0);
+        return !self.board.contains(&0u8) && (self.board.iter().fold(0, |acc:u16, x| acc + *x as u16) == 405); // Hamming Distance 2
     }
 
     fn bruteforce(&mut self) -> bool {
