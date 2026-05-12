@@ -1,0 +1,23 @@
+cabal-version:      3.0
+name:               haskell-solver
+version:            0.1.0.0
+synopsis:           Sudoku solver written in Haskell
+homepage:           https://github.com/leo9iota
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             leo9iota
+maintainer:         117021032+leo9iota@users.noreply.github.com
+category:           Game
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall -O2
+
+executable haskell-solver
+    import:           warnings
+    main-is:          Main.hs
+    other-modules:    Solver
+    build-depends:    base ^>=4.18.3.0
+    hs-source-dirs:   app
+    default-language: GHC2021
